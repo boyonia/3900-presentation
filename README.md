@@ -144,6 +144,108 @@ Upvotes: 186
 Upvote Ratio: 0.72
 Flair: None
 ```
+## Code Demonstration
+The config file was modified to the following for the demonstration:
+```bash
+{
+  "top-number-of-coins": 5,
+  "market-interval": 10, #seconds
+  "media-interval": 20, #seconds
+  "currency": "usd",
+  "historical-data-days": 90,
+  "stable-coin-keywords": ["usd", "usdt", "usdc", "busd", "dai", "tusd", "usdp", "usdd", "gusd", "fdusd"],
+  "coins_ignored": []
+}
+```
+### Major functions: 
+``getTopCoins``: The code fetches market data from CoinGecko for the top N cryptocurrencies, filters out stablecoins and ignored coins, and returns the top symbols after filtering.
+```c
+Function isStableCoin(coin, keywords):
+    If coin name or symbol contains any keyword → it's stable
+    If coin price is around $1 → it's stable
+    Return True if either is true
+
+Function getTopCoins(how_many, search_limit, currency, config):
+    Get top 'search_limit' coins from CoinGecko
+
+    Get list of stable keywords and ignored coins from config
+
+    Remove stablecoins and ignored coins from the list
+
+    Keep the first 'how_many' coins from the result
+
+    Log and return their symbols in uppercase
+```
+
+``collectHistoricalData``: loops through a list of coins, fetches their historical data, logs it, and handles any errors individually.
+```c
+Function fetchDailyHistory(symbol, currency, days):
+    Check if symbol needs to be overridden → update symbol
+
+    Set CryptoCompare daily history API URL
+    Set parameters: from symbol, to currency, and number of days
+
+    Send GET request with these parameters
+    If it fails, raise an error
+    Parse the JSON response
+
+    Return the list of daily historical data
+   
+Function collectHistoricalData(symbols, currency, days):
+    For each symbol in the list:
+        Try:
+            Print that it's being fetched
+            Get historical data for that symbol
+            Log the data
+            Wait 0.5 seconds (to avoid rate limits)
+        If there's an error:
+            Print the error for that symbol
+```
+``continuousCollection``: runs in a loop to fetch and log top cryptocurrency data daily, detect new coins, and periodically collect related media, while handling errors and avoiding duplicates.
+```c
+Function continuousCollection():
+    Load config from file
+    Set up tracking variables (last_top_symbols, last_run_day, minute_count)
+
+    Loop forever:
+        Try:
+            Reload config
+            Read top coin settings, currency, and days
+
+            Get current time and day
+            Calculate how far into the day we are
+
+            If it's the end of the day and hasn't run yet:
+                Print daily update message
+                Get top coins
+                Collect full historical data
+                Save the top coins and mark today as run
+                Collect media
+                Reset minute counter
+
+            Else:
+                Get top coins again
+                Find any new coins not seen before
+
+                If there are new coins:
+                    Print them
+                    Fetch their historical data
+                    Update known coins
+
+                Else:
+                    Just print a message (no change)
+
+                Increase minute counter
+                If time for media:
+                    Collect media
+                    Reset counter
+
+        If there's an error:
+            Print it
+
+        Wait {interval} seconds before repeating
+```
+
 
 ## Extending
 - Extend to store data in databases (e.g., SQLite, Postgres).
